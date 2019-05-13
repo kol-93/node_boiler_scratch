@@ -4,6 +4,8 @@ const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const HTMLWebpackPlugin = require('html-webpack-plugin');
 const OptimizeCSSAssetsPlugin = require('optimize-css-assets-webpack-plugin');
 const CopyPlugin = require('copy-webpack-plugin');
+const TerserPlugin = require('terser-webpack-plugin');
+const Dotenv = require('dotenv-webpack');
 
 const outPath = resolve(__dirname, './dist');
 const sourcePath = resolve(__dirname, './src');
@@ -24,9 +26,7 @@ const HTMLWebpackPluginConfig = new HTMLWebpackPlugin({
   meta: {
     title: package.name,
     description: package.description,
-    keywords: Array.isArray(package.keywords)
-      ? package.keywords.join(',')
-      : undefined
+    keywords: Array.isArray(package.keywords) ? package.keywords.join(',') : undefined
   }
 });
 
@@ -96,25 +96,16 @@ module.exports = {
         ]
       },
       {
-        test: /\.s(a|c)ss$/,
-        use: [
-          !isProd ? 'style-loader' : MiniCssExtractPlugin.loader,
-          {
-            loader: 'css-loader'
-          },
-          'sass-loader',
-          {
-            loader: 'postcss-loader'
-          }
-        ]
+        test: /\.(sa|sc|c)ss$/,
+        use: [!isProd ? 'style-loader' : MiniCssExtractPlugin.loader, 'css-loader', 'sass-loader', 'postcss-loader']
       },
       {
         test: /\.(gif|png|jpe?g|svg)$/i,
         include: resolve(__dirname, 'public'),
         loader: 'file-loader',
         options: {
-          limit: 8192,
-          name: 'img/[name].[hash:7].[ext]'
+          name: '[name].[hash:7].[ext]',
+          outputPath: 'public/'
         }
       },
       {
@@ -134,7 +125,23 @@ module.exports = {
     hints: isProd ? 'warning' : false
   },
 
+  optimization: isProd
+    ? {
+        minimizer: [
+          new TerserPlugin({
+            cache: true,
+            parallel: true
+          })
+        ]
+      }
+    : {},
+
   plugins: [
+    new Dotenv({
+      path: isProd ? './.env.production' : './.env.development',
+      safe: true
+    }),
+
     HTMLWebpackPluginConfig,
 
     new MiniCssExtractPlugin({
